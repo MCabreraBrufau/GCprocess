@@ -54,7 +54,9 @@ library(tidyverse)
 #Detection: peak detection (start&end RTs, RT of max)
 #Area under peak
 #General metrics: absolute noise (sd of TIC across RT windows, excluding the peak)
+<<<<<<< HEAD
 #Peak quality metrics: signal-to-noise ratio,  peak significance level , (sharpness, Gaussian similarity) maybe
+>>>>>>> c63cbcd63a91dae9a19653e6a22ace9c2c99506b
 
 
 
