@@ -26,6 +26,7 @@ fidfiles<- filelist[!grepl(pattern = "REF1",x = filelist)]
 
 
 
+
 library(tidyverse)
 
 #Following in this script are test to process these 2 types of data with different packages. I will try the following packages: 
@@ -144,6 +145,7 @@ A%>%
   geom_line(aes(y=FID_sample5, col="OG"))+
   geom_line(aes(y=baseline.corr(FID_sample5, lambda=1e12, p=0.00001), col="bs-corr"))+
   scale_y_continuous(limits = c(-10000,1e5))
+<<<<<<< HEAD
 
 #As the CO2 peak is always very clear and has a long baseline before the peak, we could do the baseline correction "manually", taking the mean value of the 0.3 minutes before the peak as the zero value, as in: 
 A %>% 
@@ -156,6 +158,31 @@ A %>%
   # geom_line(aes(y=baseline.corr(FID_sample3, lambda=1e12, p=0.00001), col="bs-corr"))+
   scale_y_continuous(limits = c(-10000,1e6))
 
+
+#As the CO2 peak is always very clear and has a long baseline before the peak, we could do the baseline correction "manually", taking the mean value of the 0.3 minutes before the peak as the zero value, as in: 
+A %>% 
+  filter(between(RT,co2RTs[1],co2RTs[2]))%>%
+  mutate(basecFID_sample7=FID_sample7-mean(FID_sample7[1:360])) %>% 
+  ggplot(aes(x=RT))+
+  geom_line(aes(y=FID_sample7, col="OG"))+
+  geom_line(aes(y=basecFID_sample7, col="bs-corr"))+
+  geom_rect(aes(xmin=co2RTs[1], xmax=4.5, ymin=-10000, ymax=10000, fill="bs-corr"), alpha=0.2)+
+  # geom_line(aes(y=baseline.corr(FID_sample3, lambda=1e12, p=0.00001), col="bs-corr"))+
+  scale_y_continuous(limits = c(-10000,1e6))
+
+
+
+
+#N2O Baseline correction 
+A%>%
+  select(RT,ECD_sample3)%>%
+  filter(between(RT,n2oRTs[1],n2oRTs[2]))%>%
+  rename(OG=names(.)[2]) %>% 
+  mutate(basecorr=baseline.corr(OG))%>%
+  pivot_longer(cols = -RT, names_to = "chrom", values_to = "value") %>% 
+  ggplot(aes(x=RT,y=value, col=chrom))+
+  geom_line()+
+  facet_grid(rows = vars(chrom),scales = "free")
 
 
 
