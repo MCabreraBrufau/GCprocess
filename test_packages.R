@@ -54,9 +54,9 @@ library(tidyverse)
 #Detection: peak detection (start&end RTs, RT of max)
 #Area under peak
 #General metrics: absolute noise (sd of TIC across RT windows, excluding the peak)
-<<<<<<< HEAD
+
 #Peak quality metrics: signal-to-noise ratio,  peak significance level , (sharpness, Gaussian similarity) maybe
->>>>>>> c63cbcd63a91dae9a19653e6a22ace9c2c99506b
+
 
 
 
@@ -86,17 +86,18 @@ n2oRTs<- c(5.75,6.5)
 #Plot RT windows to confirm:
 
 #FID sensor
-A_long %>% filter(sensor=="FID"&RT<n2oRTs&RT>2) %>% 
+A_long %>% filter(sensor=="FID"&RT<n2oRTs&RT>2) %>% filter(RT%%0.005<.0002) %>% 
 ggplot(aes(x=RT, y=value, group=paste(sensor,sampleno)))+
-  geom_rect(aes(xmin=co2RTs[1], xmax=co2RTs[2],ymin=-Inf, ymax=Inf, fill="CO2"), alpha=0.1)+
-  geom_rect(aes(xmin=ch4RTs[1], xmax=ch4RTs[2],ymin=-Inf, ymax=Inf, fill="CH4"), alpha=0.1)+
+  geom_rect(aes(xmin=co2RTs[1], xmax=co2RTs[2],ymin=min(value), ymax=max(value), fill="CO2"), alpha=0.1)+
+  geom_rect(aes(xmin=ch4RTs[1], xmax=ch4RTs[2],ymin=min(value), ymax=max(value), fill="CH4"), alpha=0.1)+
   geom_line()+
   facet_wrap(facets = ~sensor, scales = "free")
 
+
 #ECD sensor
-A_long %>% filter(sensor=="ECD"&RT>c(co2RTs))%>%
+A_long %>% filter(sensor=="ECD"&RT>c(co2RTs)&RT<6.6)%>% filter(RT%%0.005<.0005) %>% 
   ggplot(aes(x=RT, y=value, group=paste(sensor,sampleno)))+
-  geom_rect(aes(xmin=n2oRTs[1], xmax=n2oRTs[2],ymin=-Inf, ymax=Inf, fill="N2O"), alpha=0.7)+
+  geom_rect(aes(xmin=n2oRTs[1], xmax=n2oRTs[2],ymin=min(value), ymax=max(value), fill="N2O"), alpha=0.7)+
   # geom_vline(xintercept = c(n2oRTs))+
   geom_line()+
   facet_wrap(facets = ~sensor, scales = "free")
@@ -120,30 +121,54 @@ library(ptw)
 # asysm: Trend estimation with asymmetric least squares 
 baseline.corr(y = )# this function uses the asysm function to provide a baseline-corrected chromatogram
 
+asysm(y,#data to correct, either as vector or as matrix with each chromatogram as a row
+      lambda = 1e7, #smoothing parameter
+      p=0.001, #asymetry parameter
+      eps=1e-8, #numerical precission for convergence
+      maxit = 25)#max number of iterations (warns when no convergence reached)
 
-#Default seems to work relatively well for CH4 when RT windows are suplied
+
+#Default seems to work relatively well for CH4 when RT windows are supplied
 A%>%
   filter(between(RT,ch4RTs[1],ch4RTs[2]))%>%
 ggplot(aes(x=RT))+
-  geom_line(aes(y=FID_sample4, col="OG"))+
-  geom_line(aes(y=baseline.corr(FID_sample4), col="bs-corr"))
+  geom_line(aes(y=FID_sample7, col="OG"))+
+  geom_line(aes(y=baseline.corr(FID_sample7,lambda=1e10, p=0.0001), col="bs-corr"))+
+  scale_y_continuous(limits = c(-1000,3e4))
 
 
-#Baseline correction default for CO2 does not work correctly. 
+#Baseline correction does not work for CO2 correctly, even after trying different parameters. Probably too asymetric a shape, the function tries to lower right hand tail of peak to zero, but this is not correct. 
 A%>%
   filter(between(RT,co2RTs[1],co2RTs[2]))%>%
   ggplot(aes(x=RT))+
+  geom_line(aes(y=FID_sample5, col="OG"))+
+  geom_line(aes(y=baseline.corr(FID_sample5, lambda=1e12, p=0.00001), col="bs-corr"))+
+  scale_y_continuous(limits = c(-10000,1e5))
+
+#As the CO2 peak is always very clear and has a long baseline before the peak, we could do the baseline correction "manually", taking the mean value of the 0.3 minutes before the peak as the zero value, as in: 
+A %>% 
+  filter(between(RT,co2RTs[1],co2RTs[2]))%>%
+  mutate(basecFID_sample7=FID_sample7-mean(FID_sample7[1:360])) %>% 
+  ggplot(aes(x=RT))+
   geom_line(aes(y=FID_sample7, col="OG"))+
-  geom_line(aes(y=baseline.corr(FID_sample7), col="bs-corr"))
+  geom_line(aes(y=basecFID_sample7, col="bs-corr"))+
+  geom_rect(aes(xmin=co2RTs[1], xmax=4.5, ymin=-10000, ymax=10000, fill="bs-corr"), alpha=0.2)+
+  # geom_line(aes(y=baseline.corr(FID_sample3, lambda=1e12, p=0.00001), col="bs-corr"))+
+  scale_y_continuous(limits = c(-10000,1e6))
+
+
 
 
 #N2O Baseline correction 
 A%>%
+  select(RT,ECD_sample3)%>%
   filter(between(RT,n2oRTs[1],n2oRTs[2]))%>%
-  ggplot(aes(x=RT))+
-  geom_line(aes(y=ECD_sample1, col="OG"))
-  geom_line(aes(y=baseline.corr(ECD_sample2), col="bs-corr"))
-
+  rename(OG=names(.)[2]) %>% 
+  mutate(basecorr=baseline.corr(OG))%>%
+  pivot_longer(cols = -RT, names_to = "chrom", values_to = "value") %>% 
+  ggplot(aes(x=RT,y=value, col=chrom))+
+  geom_line()+
+  facet_grid(rows = vars(chrom),scales = "free")
 
 
 
