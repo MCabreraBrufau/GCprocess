@@ -192,7 +192,7 @@ for(datecalcurve in unique(gc_complete$date)){
 
 # Print pdf
 setwd(plots_path)
-gg_save_pdf(list = plt_list, filename = paste0("calcurves.pdf"))
+gg_save_pdf(list = plt_list, filename = paste0("calcurves_restore4c.pdf"))
 
 
 rm(excluded,calcurve,plt_CH4,plt_CO2,plt_N2O,datecalcurve,plt_list)
@@ -224,8 +224,12 @@ cal%>%
   mutate(average_factor=mean(estimate)) %>% 
   # filter(r.squared>0.95) %>% 
   ggplot(aes(x=as.Date(as.character(date),format="%Y%m%d"), y=estimate/average_factor, col=gas))+
+  geom_hline(yintercept = 1)+
   geom_point()+
-  facet_grid(rows = vars(gas))
+  scale_x_date(name="Date of analysis", date_breaks = "1 month", date_minor_breaks = "7 days",date_labels = "%B")+
+  scale_y_continuous(name="Rel. dev. from mean")+
+  facet_grid(rows = vars(gas))+
+  ggtitle("Relative deviation of daily calibration factor")
 
 #PLot of relative calibration factor stability
 cal%>%
@@ -236,12 +240,40 @@ cal%>%
   ggplot(aes(x=gas, y=estimate/average_factor, fill=gas))+
   geom_violin()+
   geom_hline(yintercept = 1)+
+  scale_y_continuous(name="Rel. dev. from mean")+
   geom_dotplot(binaxis= "y",
                stackdir = "center",binwidth=0.01,
                # dotsize = 1,
                fill = 1) +
   ggtitle("Relative deviation of daily calibration factor")
 
+#Timeseries of P5 absolute areas 
+gc_complete_long_cal%>%
+  filter(vol==5) %>%
+  # filter(r.squared>0.95) %>% 
+  ggplot(aes(x=as.Date(as.character(date),format="%Y%m%d"), y=area, col=gas))+
+  geom_hline(yintercept = 1)+
+  geom_point()+
+  scale_x_date(name="Date of analysis", date_breaks = "1 month", date_minor_breaks = "7 days",date_labels = "%B")+
+  scale_y_continuous(name="Area of peak")+
+  facet_grid(rows = vars(gas), scales="free")+
+  ggtitle("Timeseries of P5 absolute areas ")
+
+
+# PLOT absolute area of P5 injections
+gc_complete_long_cal %>% 
+  filter(vol==5) %>%
+  group_by(gas) %>% 
+  mutate(avg=mean(area,na.rm = T)) %>% 
+  ggplot(aes(x=gas, y=area/avg, fill=gas))+geom_violin()+
+  # geom_jitter(width = 0.2,size = 1)+
+  geom_dotplot(binaxis= "y",
+               stackdir = "center",binwidth=0.025,
+               dotsize = 0.5,
+               fill = 1) +
+  geom_hline(yintercept = 1)+
+  scale_y_continuous(name="Area of peak/mean area")+
+  ggtitle("P5 deviation from mean (not calibrated with standard curves)")
 
 
 # PLOT relative deviation of P5 areas for each of the gasses
@@ -256,7 +288,10 @@ gc_complete_long_cal %>%
                dotsize = 0.5,
                fill = 1) +
   scale_y_continuous(name="Estimated volume of std gas (ml)")+
-  ggtitle("P5 quality-check injections estimated vol")
+  ggtitle("P5 deviation from daily calibration curve")
+
+
+
 
   
 #Timeseries of measured P5 volume of gas
@@ -296,6 +331,29 @@ gc_complete_long_cal %>%
   scale_x_continuous(name="Actual vol injected (ml), with 0.2ml jitter", breaks = c(0,1,2,4,6,8,10,12))+
   ggtitle("Known vs measured volume in all standard gas injections")
   
+
+
+#Expected vs measured volume across all days for the 3 GHG (scatter +jitter)
+gc_complete_long_cal %>% 
+  ggplot(aes(x=vol, y=vol_est,col=gas))+
+  geom_abline(intercept = 0, slope = 1, linewidth=1)+
+  geom_jitter(size=0.8, width=0.2)+
+  facet_grid(rows=vars(gas))+
+  theme_bw()+
+  scale_y_continuous(name="Measured vol (ml)", breaks = c(0,1,2,4,6,8,10,12, 15,20,25))+
+  scale_x_continuous(name="Actual vol injected (ml), with 0.2ml jitter", breaks = c(0,1,2,4,6,8,10,12))+
+  ggtitle("Known vs measured volume (1:1 line)")
+
+#Scatter plot (all data) area vs volume injected (with 0.2jitter)
+gc_complete_long_cal %>% 
+  ggplot(aes(x=vol, y=area,col=gas))+
+  geom_jitter(size=0.8, width=0.2)+
+  theme_bw()+
+  scale_y_continuous(name="Area of peak")+
+  scale_x_continuous(name="Actual vol injected (ml), with 0.2ml jitter", breaks = c(0,1,2,4,6,8,10,12))+
+  ggtitle("Peak Area vs injected volume")+
+  facet_grid(rows=vars(gas), scales = "free")
+
 
 
 #Expected vs measured volume across all days for the 3 GHG (boxplot)
