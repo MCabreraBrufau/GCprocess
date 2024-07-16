@@ -367,3 +367,44 @@ gc_complete_long_cal %>%
   scale_x_continuous(name="Actual vol injected (ml), with 0.2ml jitter", breaks = c(0,1,2,4,6,8,10,12))+
   ggtitle("Known vs measured volume in all standard gas injections")
 
+
+
+#Test factor acording to weekday:
+date_factor %>% 
+  mutate(datef=as.Date.character(as.character(date),format="%Y%m%d"),
+         dayofweek=wday(datef, week_start=1)) %>% 
+  ggplot(aes(x=dayofweek, y=factor, col=gas))+
+  geom_point()+
+  geom_smooth(method = "lm",se=F)+
+  stat_correlation(use_label(c("R", "P", "n", "method")))+
+  facet_wrap(facets=vars(gas), scales = "free")
+
+
+#Test area of P5 injections according to weekday
+gc_complete_long_cal %>% 
+  filter(vol==5) %>%
+  mutate(dayofweek=wday(datef, week_start=1)) %>% 
+  ggplot(aes(x=dayofweek, y=area, col=gas))+
+  geom_point()+
+  geom_smooth(method = "lm",se=F)+
+  stat_correlation(use_label(c("R", "P", "n", "method")))+
+  facet_wrap(facets=vars(gas), scales = "free")
+
+
+
+
+#Test area of P5 injections according to batch within each day:
+gc_complete_long_cal %>% 
+  filter(vol==5) %>%
+  filter(gas=="n2o") %>%
+  filter(batch!="210_2") %>% 
+  mutate(batch_n=as.numeric(batch)) %>% 
+  group_by(datef) %>% 
+  mutate(batchofday=batch_n-min(batch_n)+1) %>%  
+  mutate(area_n=area/mean(area)) %>% 
+  ggplot(aes(x=batchofday, y=area_n, col=gas))+
+  geom_point()+
+  geom_smooth(method = "lm",se=F)+
+  stat_correlation(use_label(c("R", "P", "n", "method")))+
+  facet_wrap(facets=vars(gas), scales = "free")
+
